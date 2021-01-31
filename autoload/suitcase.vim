@@ -108,7 +108,7 @@ function suitcase#go(up) abort
 endfunction
 
 function suitcase#delete_autocmd() abort
-  autocmd! suitcase-cmdline-changed CmdlineChanged
+  autocmd! suitcase-cmdline-changed
   return ''
 endfunction
 
