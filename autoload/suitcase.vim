@@ -3,13 +3,28 @@
 
 let s:data = {}
 for s:cmdtype in [':', '>', '/', '?', '@', '-', '=']
-  let s:data[s:cmdtype] = {}
+  let s:data[s:cmdtype] = {
+    \ 'phase': 0,
+    \ 'index': 0,
+    \ 'history': [],
+    \ 'pattern': '',
+    \ }
 endfor | unlet s:cmdtype
 
-function suitcase#init(cmdtype) abort
-  let d = s:data[a:cmdtype]
-  let d.phase = 0
-  let d.index = 0
+augroup suitcase-cmdline-enter
+  autocmd!
+  autocmd CmdlineEnter * let s:data[expand('<afile>')].phase = 0
+  autocmd CmdlineEnter * let s:data[expand('<afile>')].index = 0
+augroup END
+
+function suitcase#switch_listener(on) abort
+  augroup suitcase-cmdline-changed
+    autocmd!
+    if a:on
+      autocmd CmdlineChanged * ++once let s:data[expand('<afile>')].phase = 0
+    endif
+  augroup END
+  return ''
 endfunction
 
 function suitcase#arrow(cmdtype, up) abort
@@ -30,24 +45,10 @@ function suitcase#arrow(cmdtype, up) abort
     \ ? d.history[d.index :]
     \ : d.history[: d.index] ->reverse()
   let delta = match(segment, d.pattern, 1)
-  if delta == -1
-    return ''
+  if delta >= 1
+    let d.index += (a:up ? +1 : -1) * delta
   endif
-  let d.index += (a:up ? +1 : -1) * delta
-  return repeat(a:up ? "\<C-p>" : "\<C-n>", delta)
-endfunction
-
-function suitcase#delete_autocmd() abort
-  autocmd! suitcase-cmdline-changed
-  return ''
-endfunction
-
-function suitcase#define_autocmd() abort
-  augroup suitcase-cmdline-changed
-    autocmd!
-    autocmd CmdlineChanged * ++once let s:data[expand('<afile>')].phase = 0
-  augroup END
-  return ''
+  return d.history[d.index]
 endfunction
 
 function s:histget(cmdtype) abort
